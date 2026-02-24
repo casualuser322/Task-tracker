@@ -35,6 +35,47 @@ services:
       timeout: 3s
       retries: 5
 
+  celery-worker:
+    build:
+      context: .
+      dockerfile: docker/tracker_web/Dockerfile
+    command: celery -A tracker worker -l info
+    env_file:
+      - .env
+    environment:
+      SERVICE: celery
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.75'
+    
+  celery-beat:
+    build:
+      context: .
+      dockerfile: docker/tracker_web/Dockerfile
+    command: celery -A taskboard beat -l info
+    env_file:
+      - .env
+    environment:
+      SERVICE: celery
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+
   web:
     build:
       context: .

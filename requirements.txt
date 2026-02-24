@@ -3,6 +3,7 @@ djangorestframework
 django-extensions
 django_redis
 django-stubs
+django-celery-results
 gunicorn
 pillow
 python-dotenv
@@ -20,3 +21,4 @@ bandit
 safety
 pre-commit
 whitenoise
+celery
