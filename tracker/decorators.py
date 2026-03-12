@@ -1,8 +1,7 @@
 from functools import wraps
 
-from django.http import HttpResponseForbidden
-from django.shortcuts import get_object_or_404
 from django.core.exceptions import PermissionDenied
+from django.shortcuts import get_object_or_404
 
 from .models import Project, TrackerGroup
 
