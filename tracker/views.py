@@ -11,6 +11,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
+from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_cookie
 
 from accounts.models import TicketsUser
 
@@ -29,8 +31,11 @@ from .models import (
     Ticket,
     TrackerGroup,
 )
+from taskboard.decorators import rate_limit, retry
 
 
+@cache_page(60 * 2)
+@vary_on_cookie
 @login_required
 def group_list(request):
     user = request.user
@@ -49,6 +54,7 @@ def group_list(request):
 
 
 @login_required
+@rate_limit("create_group", limit=20, period=60)
 def create_group(request):
     if request.method == "POST":
         form = GroupForm(request.POST)
@@ -88,7 +94,8 @@ def create_group(request):
         },
     )
 
-
+@cache_page(60 * 2)
+@vary_on_cookie
 @login_required
 @group_access_required
 def group_view(request, group_id, group=None):
@@ -116,6 +123,7 @@ def group_view(request, group_id, group=None):
 
 
 @login_required
+@rate_limit("edit_group", limit=20, period=60)
 @group_access_required
 def edit_group(request, group_id, group=None):
     user = request.user
@@ -152,7 +160,9 @@ def edit_group(request, group_id, group=None):
 
 
 @login_required
+@rate_limit("delete_group_member", limit=20, period=60)
 @group_access_required
+@retry(max_attempts=3)
 def delete_group_member(request, group_id, pk, group=None):
     user = request.user
 
@@ -163,6 +173,8 @@ def delete_group_member(request, group_id, pk, group=None):
 
 
 @login_required
+@rate_limit("leave_group_member", limit=20, period=60)
+@retry(max_attempts=3)
 def leave_group_member(request, group_id):
     user = request.user
     group = get_object_or_404(TrackerGroup, id=group_id)
@@ -184,6 +196,7 @@ def leave_group_member(request, group_id):
 
 
 @login_required
+@rate_limit("edit_project", limit=20, period=60)
 @project_access_required
 def edit_project(request, project_id, project=None):
     user = request.user
@@ -222,7 +235,9 @@ def edit_project(request, project_id, project=None):
 
 
 @login_required
+@rate_limit("delete_project", limit=20, period=60)
 @group_access_required
+@retry(max_attempts=3)
 def delete_project(request, group_id, project_id, group=None):
     user = request.user
     project = get_object_or_404(Project, id=project_id)
@@ -238,6 +253,8 @@ def delete_project(request, group_id, project_id, group=None):
 
 
 @login_required
+@rate_limit("user_email_autocomplete", limit=20, period=60)
+@retry(max_attempts=3)
 def user_email_autocomplete(request):
     query = request.GET.get("q", "")
     users = TicketsUser.objects.filter(email__icontains=query)[:10]
@@ -247,7 +264,9 @@ def user_email_autocomplete(request):
 
 
 @login_required
+@rate_limit("send_invitation", limit=20, period=60)
 @group_access_required
+@retry(max_attempts=3)
 def send_invitation(request, group_id, group=None):
     current_user = request.user
     emails = request.POST.get("emails", "").strip()
@@ -275,7 +294,9 @@ def send_invitation(request, group_id, group=None):
 
 
 @login_required
+@rate_limit("group_delete", limit=20, period=60)
 @group_access_required
+@retry(max_attempts=3)
 def group_delete(request, group_id, pk, group=None):
     if request.method == "POST":
         if group.owner == request.user:
@@ -292,7 +313,8 @@ def group_delete(request, group_id, pk, group=None):
         )
     )
 
-
+@cache_page(60 * 2)
+@vary_on_cookie
 @login_required
 def project_list(request):
     user = request.user
@@ -310,6 +332,7 @@ def project_list(request):
 
 
 @login_required
+@rate_limit("create_project", limit=20, period=60)
 @group_access_required
 def create_project(request, group_id, group=None):
     user = request.user
@@ -341,7 +364,8 @@ def create_project(request, group_id, group=None):
 
     return render(request, "projects/create_project.html", {"form": form})
 
-
+@cache_page(60 * 2)
+@vary_on_cookie
 @login_required
 @project_access_required
 def project_details(request, project_id, project=None):
@@ -384,7 +408,8 @@ def project_details(request, project_id, project=None):
         },
     )
 
-
+@cache_page(60 * 2)
+@vary_on_cookie
 @login_required
 def ticket_list(request):
     user = request.user
@@ -397,7 +422,9 @@ def ticket_list(request):
 
 @require_POST
 @csrf_protect
+@rate_limit("update_task_status", limit=20, period=60)
 @project_access_required
+@retry(max_attempts=3)
 def update_task_status(request, project_id, project=None):
     try:
         data = json.loads(request.body)
@@ -427,6 +454,8 @@ def update_task_status(request, project_id, project=None):
 
 @login_required
 @require_POST
+@rate_limit("add_subtask", limit=20, period=60)
+@retry(max_attempts=3)
 def add_subtask(request, ticket_id):
     ticket = get_object_or_404(Ticket, id=ticket_id)
 
@@ -439,7 +468,9 @@ def add_subtask(request, ticket_id):
 
 
 @login_required
+@rate_limit("update_task_ajax", limit=20, period=60)
 @project_access_required
+@retry(max_attempts=3)
 def update_task_ajax(request, project_id, ticket_id, task_id):
     if request.method == "POST":
         try:
@@ -457,6 +488,7 @@ def update_task_ajax(request, project_id, ticket_id, task_id):
 
 
 @login_required
+@rate_limit("ticket_detail", limit=20, period=60) # TODO Temporary
 @project_access_required
 def ticket_detail(request, project_id, ticket_id, project):  # TODO Decopose
     ticket = get_object_or_404(Ticket, id=ticket_id)
@@ -557,6 +589,7 @@ def ticket_detail(request, project_id, ticket_id, project):  # TODO Decopose
 
 
 @login_required
+@rate_limit("create_ticket", limit=20, period=60)
 @project_access_required
 def create_ticket(request, project_id, project):
     if request.method == "POST":
@@ -583,9 +616,10 @@ def create_ticket(request, project_id, project):
 
 
 @login_required
+@rate_limit("update_ticket", limit=20, period=60)
 @project_access_required
 def update_ticket(request, project_id, ticket_id, project=None):
-    ticket = get_object_or_404(Ticket, id=ticket_id)
+    ticket = get_object_or_404(Ticket, id=ticket_id, project=project)
 
     if request.method == "POST":
         ticket_form = TicketForm(
