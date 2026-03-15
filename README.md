@@ -93,3 +93,4 @@ POST /api/tasks/
 - [ ] Handling Ajax errors with toast-notifications
 - [ ] Make loading indicators 
 - [ ] Decompose tracker module
+- [ ] Make 'secrets' service

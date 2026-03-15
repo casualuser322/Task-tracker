@@ -9,12 +9,13 @@ from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
-from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_cookie
 
 from accounts.models import TicketsUser
+from taskboard.decorators import rate_limit, retry
 
 from .decorators import group_access_required, project_access_required
 from .forms import (
@@ -31,7 +32,6 @@ from .models import (
     Ticket,
     TrackerGroup,
 )
-from taskboard.decorators import rate_limit, retry
 
 
 @cache_page(60 * 2)
@@ -93,6 +93,7 @@ def create_group(request):
             "form": form,
         },
     )
+
 
 @cache_page(60 * 2)
 @vary_on_cookie
@@ -313,6 +314,7 @@ def group_delete(request, group_id, pk, group=None):
         )
     )
 
+
 @cache_page(60 * 2)
 @vary_on_cookie
 @login_required
@@ -364,6 +366,7 @@ def create_project(request, group_id, group=None):
 
     return render(request, "projects/create_project.html", {"form": form})
 
+
 @cache_page(60 * 2)
 @vary_on_cookie
 @login_required
@@ -407,6 +410,7 @@ def project_details(request, project_id, project=None):
             "priority": priority,
         },
     )
+
 
 @cache_page(60 * 2)
 @vary_on_cookie
@@ -488,7 +492,9 @@ def update_task_ajax(request, project_id, ticket_id, task_id):
 
 
 @login_required
-@rate_limit("ticket_detail", limit=20, period=60) # TODO Temporary
+@rate_limit(
+    "ticket_detail", limit=20, period=60
+)  # TODO Temporary, before decompose
 @project_access_required
 def ticket_detail(request, project_id, ticket_id, project):  # TODO Decopose
     ticket = get_object_or_404(Ticket, id=ticket_id)
