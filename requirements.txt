@@ -1,10 +1,12 @@
 django
 djangorestframework
+djangorestframework-simplejwt
 django-extensions
 django_redis
 django-stubs
 django-celery-results
 gunicorn
+jwt
 pillow
 python-dotenv
 psycopg2-binary

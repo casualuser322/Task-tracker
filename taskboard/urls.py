@@ -18,10 +18,16 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import RedirectView
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 
 from .views import health_check
 
 urlpatterns = [
+    path("api/token/", TokenObtainPairView.as_view()),
+    path("api/token/refresh/", TokenRefreshView.as_view()),
     path("tracker/", include("tracker.urls")),
     path("accounts/", include("accounts.urls")),
     path("health/", health_check, name="health_check"),
